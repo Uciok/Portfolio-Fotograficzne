@@ -86,9 +86,7 @@ exports.stripeWebhook = onRequest(async (req, res) => {
   let event;
 
   try {
-    // W produkcji weryfikuj signature (na razie pomijamy dla testów)
     event = req.body;
-    // Dla produkcji:
     // event = stripe.webhooks.constructEvent(req.rawBody, sig, webhookSecret.value());
   } catch (err) {
     console.error("Webhook signature verification failed:", err.message);
@@ -107,7 +105,7 @@ exports.stripeWebhook = onRequest(async (req, res) => {
         .get();
 
       const existingProductIds = existingPurchases.docs.map(
-        (doc) => doc.data().productId
+        (doc) => doc.data().productId,
       );
 
       for (const item of items) {
