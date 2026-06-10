@@ -230,13 +230,19 @@
                   </div>
                 </div>
                 <button
-                  @click="addToCart(product)"
-                  :disabled="isInCart(product.id)"
-                  :class="isInCart(product.id) ? 'bg-green-600 cursor-not-allowed' : 'bg-primary hover:bg-red-600'"
-                  class="px-6 py-3 rounded-full text-white font-bold transition-all duration-300 hover:scale-105 disabled:scale-100"
-                >
-                  {{ isInCart(product.id) ? '✓ W koszyku' : 'Dodaj do koszyka' }}
-                </button>
+  @click="addToCart(product)"
+  :disabled="isInCart(product.id) || isOwned(product.id)"
+  :class="{
+    'bg-green-600 cursor-not-allowed': isInCart(product.id),
+    'bg-blue-600 cursor-not-allowed': isOwned(product.id) && !isInCart(product.id),
+    'bg-primary hover:bg-red-600': !isInCart(product.id) && !isOwned(product.id)
+  }"
+  class="px-6 py-3 rounded-full text-white font-bold transition-all duration-300 hover:scale-105 disabled:scale-100"
+>
+  <span v-if="isOwned(product.id)">✓ Posiadasz</span>
+  <span v-else-if="isInCart(product.id)">✓ W koszyku</span>
+  <span v-else>Dodaj do koszyka</span>
+</button>
               </div>
             </div>
           </div>
@@ -264,12 +270,12 @@
 
         <div class="grid md:grid-cols-2 gap-8">
           <!-- Galeria zdjęć -->
-<div>
-  <img
-    :src="quickViewImages[currentImageIndex]"
-    :alt="quickViewProduct.title"
-    class="w-full rounded-2xl mb-4 object-contain max-h-96 bg-gray-950"
-  />
+          <div>
+            <img
+              :src="quickViewImages[currentImageIndex]"
+              :alt="quickViewProduct.title"
+              class="w-full rounded-2xl mb-4 object-contain max-h-96 bg-gray-950"
+            />
             <div class="grid grid-cols-4 gap-2">
               <img
                 v-for="(img, index) in quickViewImages"
@@ -430,6 +436,7 @@
             <!-- Przyciski -->
             <div class="space-y-3">
               <button
+                @click="goToCheckout"
                 class="w-full bg-primary hover:bg-red-600 text-white py-4 rounded-full font-bold transition-all duration-300 hover:scale-105"
               >
                 Przejdź do płatności
@@ -600,328 +607,379 @@
 </template>
 
 <script>
+import { ref, onMounted } from 'vue'
+import { useAuth } from '../composables/useAuth'
+import { collection, query, where, getDocs } from 'firebase/firestore'
+import { db } from '../firebase/config'
+
 export default {
   name: 'Shop',
+  setup() {
+    const { user } = useAuth()
+    const ownedProducts = ref([])
+    
+    // Pobierz zakupy użytkownika
+    const fetchOwnedProducts = async () => {
+      if (!user.value) {
+        ownedProducts.value = []
+        return
+      }
+      
+      try {
+        const q = query(
+          collection(db, 'purchases'),
+          where('userId', '==', user.value.uid)
+        )
+        const snapshot = await getDocs(q)
+        ownedProducts.value = snapshot.docs.map(doc => doc.data().productId)
+      } catch (error) {
+        console.error('Error fetching purchases:', error)
+        ownedProducts.value = []
+      }
+    }
+    
+    onMounted(() => {
+      fetchOwnedProducts()
+    })
+    
+    return {
+      user,
+      ownedProducts,
+      fetchOwnedProducts
+    }
+  },
   data() {
     return {
       searchQuery: '',
       activeFilter: 'all',
-  sortBy: 'popular',
-  cart: [],
-  wishlist: [],
-  showCart: false,
-  quickViewProduct: null,
-  currentImageIndex: 0,
-  currentTestimonial: 0,
- products: [
-  {
-    id: 1,
-    title: 'Automotive Pro',
-    description: 'Pakiet 25 presetów idealnych do fotografii motoryzacyjnej. Intensywne kolory, mocne kontrasty.',
-    category: 'automotive',
-    price: 149,
-    oldPrice: null,
-    count: 25,
-    downloads: 250,
-    rating: 5,
-    reviews: 45,
-    badge: 'BESTSELLER',
-    image: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600&h=400&fit=crop',
-    images: [
-      'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&h=400&fit=crop'
-    ]
+      sortBy: 'popular',
+      cart: [],
+      wishlist: [],
+      showCart: false,
+      quickViewProduct: null,
+      currentImageIndex: 0,
+      currentTestimonial: 0,
+      products: [
+        {
+          id: 1,
+          title: 'Automotive Pro',
+          description: 'Pakiet 25 presetów idealnych do fotografii motoryzacyjnej. Intensywne kolory, mocne kontrasty.',
+          category: 'automotive',
+          price: 149,
+          oldPrice: null,
+          count: 25,
+          downloads: 250,
+          rating: 5,
+          reviews: 45,
+          badge: 'BESTSELLER',
+          image: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600&h=400&fit=crop',
+          images: [
+            'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&h=400&fit=crop'
+          ]
+        },
+        {
+          id: 2,
+          title: 'Portrait Collection',
+          description: 'Kompletna kolekcja 30 presetów portretowych. Od naturalnych po artystyczne.',
+          category: 'portrait',
+          price: 99,
+          oldPrice: 149,
+          count: 30,
+          downloads: 180,
+          rating: 5,
+          reviews: 32,
+          badge: 'PROMOCJA',
+          image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&h=400&fit=crop',
+          images: [
+            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=600&h=400&fit=crop'
+          ]
+        },
+        {
+          id: 3,
+          title: 'Complete Collection',
+          description: 'Kompletna kolekcja wszystkich moich presetów. Najlepsza oferta!',
+          category: 'universal',
+          price: 199,
+          oldPrice: 298,
+          count: 50,
+          downloads: 320,
+          rating: 5,
+          reviews: 67,
+          badge: 'BESTSELLER',
+          image: 'https://images.unsplash.com/photo-1542362567-b07e54358753?w=600&h=400&fit=crop',
+          images: [
+            'https://images.unsplash.com/photo-1542362567-b07e54358753?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1513721032312-6a18a42c8763?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600&h=400&fit=crop'
+          ]
+        },
+        {
+          id: 4,
+          title: 'Moody Automotive',
+          description: '15 presetów z klimatycznymi, ciemnymi tonacjami dla aut.',
+          category: 'automotive',
+          price: 79,
+          oldPrice: null,
+          count: 15,
+          downloads: 95,
+          rating: 4,
+          reviews: 18,
+          badge: null,
+          image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&h=400&fit=crop',
+          images: [
+            'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1525609004556-c46c7d6cf023?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=600&h=400&fit=crop'
+          ]
+        },
+        {
+          id: 5,
+          title: 'Cinematic Pack',
+          description: '20 presetów filmowych idealnych do storytelling.',
+          category: 'universal',
+          price: 119,
+          oldPrice: null,
+          count: 20,
+          downloads: 140,
+          rating: 5,
+          reviews: 28,
+          badge: 'NOWOŚĆ',
+          image: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=600&h=400&fit=crop',
+          images: [
+            'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&h=400&fit=crop'
+          ]
+        },
+        {
+          id: 6,
+          title: 'Natural Beauty',
+          description: '18 presetów z naturalnymi, ciepłymi tonacjami dla portretów.',
+          category: 'portrait',
+          price: 89,
+          oldPrice: null,
+          count: 18,
+          downloads: 110,
+          rating: 5,
+          reviews: 24,
+          badge: null,
+          image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=400&fit=crop',
+          images: [
+            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=600&h=400&fit=crop'
+          ]
+        }
+      ],
+      testimonials: [
+        {
+          name: 'Michał K.',
+          role: 'Fotograf motoryzacyjny',
+          text: 'Używam tych presetów od pół roku. Ogromne przyspieszenie pracy przy obróbce. Klienci są zachwyceni efektami!'
+        },
+        {
+          name: 'Anna W.',
+          role: 'Fotografka portretowa',
+          text: 'Najlepsze presety jakie kupiłam. Naturalne kolory, świetnie działają na różnych typach skóry. Polecam każdemu!'
+        },
+        {
+          name: 'Paweł D.',
+          role: 'Content creator',
+          text: 'Complete Collection to najlepsza inwestycja. Jeden preset, dwa kliknięcia i zdjęcie wygląda profesjonalnie. Oszczędzam godziny pracy!'
+        },
+        {
+          name: 'Karolina M.',
+          role: 'Fotografka ślubna',
+          text: 'Od kiedy kupiłam pakiet portretowy, moja obróbka nabrała spójności. Klienci pytają co zmieniłam - wszystko dzięki tym presetom!'
+        },
+        {
+          name: 'Tomasz B.',
+          role: 'Fotograf automotive',
+          text: 'Automotive Pro to must-have dla każdego fotografa samochodowego. Kolory są intensywne, kontrasty idealne. 10/10!'
+        },
+        {
+          name: 'Magda S.',
+          role: 'Influencerka',
+          text: 'Używam Cinematic Pack do wszystkich postów na Instagramie. Feed wygląda spójnie i profesjonalnie. Warto!'
+        },
+        {
+          name: 'Jakub L.',
+          role: 'Fotograf komercyjny',
+          text: 'Kupiłem Complete Collection i nie żałuję ani złotówki. Mam preset na każdą okazję. Jakość rewelacyjna!'
+        },
+        {
+          name: 'Ola K.',
+          role: 'Fotografka lifestyle',
+          text: 'Natural Beauty to mój ulubiony pakiet. Zdjęcia wyglądają naturalnie ale profesjonalnie. Moje klientki są szczęśliwe!'
+        }
+      ],
+      faqs: [
+        {
+          question: 'Jak instalować presety?',
+          answer: 'Do każdego pakietu dołączona jest szczegółowa instrukcja instalacji w formie PDF oraz video tutorial. Instalacja trwa 2-3 minuty.\n\nPresety działają na:\n• Lightroom Classic (Windows/Mac)\n• Lightroom CC (Windows/Mac)\n• Lightroom Mobile (iOS/Android)',
+          open: false
+        },
+        {
+          question: 'Czy mogę zwrócić produkt?',
+          answer: 'Tak! Oferujemy 100% gwarancję zwrotu pieniędzy w ciągu 30 dni.\n\nJeśli z jakiegokolwiek powodu nie jesteś zadowolony, wystarczy napisać maila a zwrócimy całą kwotę - bez pytań.\n\nTwoje zadowolenie jest najważniejsze!',
+          open: false
+        },
+        {
+          question: 'Czy otrzymam aktualizacje?',
+          answer: 'Tak! Wszystkie aktualizacje są DARMOWE i na zawsze.\n\nOtrzymasz:\n• Nowe presety dodawane do pakietu\n• Poprawki i optymalizacje\n• Dostęp do nowych wersji\n• Wsparcie techniczne\n\nRaz kupujesz, zawsze masz dostęp!',
+          open: false
+        },
+        {
+          question: 'Na ilu komputerach mogę używać?',
+          answer: 'Możesz używać presetów na nieograniczonej liczbie swoich urządzeń.\n\nLicencja osobista obejmuje:\n• Wszystkie Twoje komputery\n• Wszystkie Twoje urządzenia mobilne\n• Użytek komercyjny (możesz edytować zdjęcia dla klientów)\n\nNie możesz: odsprzedawać presetów ani udostępniać innym osobom.',
+          open: false
+        }
+      ]
+    }
   },
-  {
-    id: 2,
-    title: 'Portrait Collection',
-    description: 'Kompletna kolekcja 30 presetów portretowych. Od naturalnych po artystyczne.',
-    category: 'portrait',
-    price: 99,
-    oldPrice: 149,
-    count: 30,
-    downloads: 180,
-    rating: 5,
-    reviews: 32,
-    badge: 'PROMOCJA',
-    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&h=400&fit=crop',
-    images: [
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=600&h=400&fit=crop'
-    ]
+  computed: {
+    filteredProducts() {
+      let filtered = this.products
+      if (this.activeFilter !== 'all') {
+        filtered = filtered.filter(p => p.category === this.activeFilter)
+      }
+
+      if (this.searchQuery) {
+        const query = this.searchQuery.toLowerCase()
+        filtered = filtered.filter(p => 
+          p.title.toLowerCase().includes(query) || 
+          p.description.toLowerCase().includes(query)
+        )
+      }
+
+      if (this.sortBy === 'price-low') {
+        filtered = [...filtered].sort((a, b) => a.price - b.price)
+      } else if (this.sortBy === 'price-high') {
+        filtered = [...filtered].sort((a, b) => b.price - a.price)
+      } else if (this.sortBy === 'popular') {
+        filtered = [...filtered].sort((a, b) => b.downloads - a.downloads)
+      } else if (this.sortBy === 'newest') {
+        filtered = [...filtered].sort((a, b) => b.id - a.id)
+      }
+
+      return filtered
+    },
+    cartSubtotal() {
+      return this.cart.reduce((sum, item) => sum + item.price, 0)
+    },
+    cartTotal() {
+      return this.cartSubtotal
+    },
+    quickViewImages() {
+      if (!this.quickViewProduct) return []
+      
+      if (this.quickViewProduct.images && this.quickViewProduct.images.length > 0) {
+        return this.quickViewProduct.images
+      }
+      
+      const baseUrl = this.quickViewProduct.image
+      return [
+        baseUrl,
+        baseUrl.replace('?w=', '?seed=1&w='),
+        baseUrl.replace('?w=', '?seed=2&w='),
+        baseUrl.replace('?w=', '?seed=3&w=')
+      ]
+    }
   },
-  {
-    id: 3,
-    title: 'Complete Collection',
-    description: 'Kompletna kolekcja wszystkich moich presetów. Najlepsza oferta!',
-    category: 'universal',
-    price: 199,
-    oldPrice: 298,
-    count: 50,
-    downloads: 320,
-    rating: 5,
-    reviews: 67,
-    badge: 'BESTSELLER',
-    image: 'https://images.unsplash.com/photo-1542362567-b07e54358753?w=600&h=400&fit=crop',
-    images: [
-      'https://images.unsplash.com/photo-1542362567-b07e54358753?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1513721032312-6a18a42c8763?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600&h=400&fit=crop'
-    ]
+  methods: {
+    getCategoryName(category) {
+      const names = {
+        'automotive': 'Motoryzacja',
+        'portrait': 'Portrety',
+        'universal': 'Uniwersalne'
+      }
+      return names[category] || category
+    },
+    addToCart(product) {
+      // Sprawdź czy już zakupiony
+      if (this.isOwned(product.id)) {
+        alert('Masz już ten produkt w swoich zakupach! 🎉')
+        return
+      }
+      
+      // Sprawdź czy w koszyku
+      if (!this.isInCart(product.id)) {
+        this.cart.push({...product})
+      }
+    },
+    removeFromCart(productId) {
+      this.cart = this.cart.filter(item => item.id !== productId)
+    },
+    clearCart() {
+      if (confirm('Czy na pewno chcesz wyczyścić koszyk?')) {
+        this.cart = []
+      }
+    },
+    isInCart(productId) {
+      return this.cart.some(item => item.id === productId)
+    },
+    isOwned(productId) {
+      return this.ownedProducts.includes(productId)
+    },
+    toggleWishlist(productId) {
+      const index = this.wishlist.indexOf(productId)
+      if (index > -1) {
+        this.wishlist.splice(index, 1)
+      } else {
+        this.wishlist.push(productId)
+      }
+    },
+    isInWishlist(productId) {
+      return this.wishlist.includes(productId)
+    },
+    openQuickView(product) {
+      this.quickViewProduct = product
+      this.currentImageIndex = 0
+      document.body.style.overflow = 'hidden'
+    },
+    closeQuickView() {
+      this.quickViewProduct = null
+      document.body.style.overflow = ''
+    },
+    toggleFaq(index) {
+      this.faqs[index].open = !this.faqs[index].open
+    },
+    nextTestimonial() {
+      this.currentTestimonial = (this.currentTestimonial + 1) % this.testimonials.length
+    },
+    prevTestimonial() {
+      this.currentTestimonial = (this.currentTestimonial - 1 + this.testimonials.length) % this.testimonials.length
+    },
+    goToTestimonial(index) {
+      this.currentTestimonial = index
+    },
+    goToCheckout() {
+      // Zapisz koszyk do localStorage
+      localStorage.setItem('cart', JSON.stringify(this.cart))
+      // Przekieruj do checkout
+      this.$router.push('/checkout')
+      // Zamknij sidebar koszyka
+      this.showCart = false
+    }
   },
-  {
-    id: 4,
-    title: 'Moody Automotive',
-    description: '15 presetów z klimatycznymi, ciemnymi tonacjami dla aut.',
-    category: 'automotive',
-    price: 79,
-    oldPrice: null,
-    count: 15,
-    downloads: 95,
-    rating: 4,
-    reviews: 18,
-    badge: null,
-    image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&h=400&fit=crop',
-    images: [
-      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1525609004556-c46c7d6cf023?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=600&h=400&fit=crop'
-    ]
-  },
-  {
-    id: 5,
-    title: 'Cinematic Pack',
-    description: '20 presetów filmowych idealnych do storytelling.',
-    category: 'universal',
-    price: 119,
-    oldPrice: null,
-    count: 20,
-    downloads: 140,
-    rating: 5,
-    reviews: 28,
-    badge: 'NOWOŚĆ',
-    image: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=600&h=400&fit=crop',
-    images: [
-      'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&h=400&fit=crop'
-    ]
-  },
-  {
-    id: 6,
-    title: 'Natural Beauty',
-    description: '18 presetów z naturalnymi, ciepłymi tonacjami dla portretów.',
-    category: 'portrait',
-    price: 89,
-    oldPrice: null,
-    count: 18,
-    downloads: 110,
-    rating: 5,
-    reviews: 24,
-    badge: null,
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=400&fit=crop',
-    images: [
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=600&h=400&fit=crop'
-    ]
+  beforeUnmount() {
+    document.body.style.overflow = ''
   }
-],
-  testimonials: [
-    {
-      name: 'Michał K.',
-      role: 'Fotograf motoryzacyjny',
-      text: 'Używam tych presetów od pół roku. Ogromne przyspieszenie pracy przy obróbce. Klienci są zachwyceni efektami!'
-    },
-    {
-      name: 'Anna W.',
-      role: 'Fotografka portretowa',
-      text: 'Najlepsze presety jakie kupiłam. Naturalne kolory, świetnie działają na różnych typach skóry. Polecam każdemu!'
-    },
-    {
-      name: 'Paweł D.',
-      role: 'Content creator',
-      text: 'Complete Collection to najlepsza inwestycja. Jeden preset, dwa kliknięcia i zdjęcie wygląda profesjonalnie. Oszczędzam godziny pracy!'
-    },
-    {
-      name: 'Karolina M.',
-      role: 'Fotografka ślubna',
-      text: 'Od kiedy kupiłam pakiet portretowy, moja obróbka nabrała spójności. Klienci pytają co zmieniłam - wszystko dzięki tym presetom!'
-    },
-    {
-      name: 'Tomasz B.',
-      role: 'Fotograf automotive',
-      text: 'Automotive Pro to must-have dla każdego fotografa samochodowego. Kolory są intensywne, kontrasty idealne. 10/10!'
-    },
-    {
-      name: 'Magda S.',
-      role: 'Influencerka',
-      text: 'Używam Cinematic Pack do wszystkich postów na Instagramie. Feed wygląda spójnie i profesjonalnie. Warto!'
-    },
-    {
-      name: 'Jakub L.',
-      role: 'Fotograf komercyjny',
-      text: 'Kupiłem Complete Collection i nie żałuję ani złotówki. Mam preset na każdą okazję. Jakość rewelacyjna!'
-    },
-    {
-      name: 'Ola K.',
-      role: 'Fotografka lifestyle',
-      text: 'Natural Beauty to mój ulubiony pakiet. Zdjęcia wyglądają naturalnie ale profesjonalnie. Moje klientki są szczęśliwe!'
-    }
-  ],
-  faqs: [
-    {
-      question: 'Jak instalować presety?',
-      answer: 'Do każdego pakietu dołączona jest szczegółowa instrukcja instalacji w formie PDF oraz video tutorial. Instalacja trwa 2-3 minuty.\n\nPresety działają na:\n• Lightroom Classic (Windows/Mac)\n• Lightroom CC (Windows/Mac)\n• Lightroom Mobile (iOS/Android)',
-      open: false
-    },
-    {
-      question: 'Czy mogę zwrócić produkt?',
-      answer: 'Tak! Oferujemy 100% gwarancję zwrotu pieniędzy w ciągu 30 dni.\n\nJeśli z jakiegokolwiek powodu nie jesteś zadowolony, wystarczy napisać maila a zwrócimy całą kwotę - bez pytań.\n\nTwoje zadowolenie jest najważniejsze!',
-      open: false
-    },
-    {
-      question: 'Czy otrzymam aktualizacje?',
-      answer: 'Tak! Wszystkie aktualizacje są DARMOWE i na zawsze.\n\nOtrzymasz:\n• Nowe presety dodawane do pakietu\n• Poprawki i optymalizacje\n• Dostęp do nowych wersji\n• Wsparcie techniczne\n\nRaz kupujesz, zawsze masz dostęp!',
-      open: false
-    },
-    {
-      question: 'Na ilu komputerach mogę używać?',
-      answer: 'Możesz używać presetów na nieograniczonej liczbie swoich urządzeń.\n\nLicencja osobista obejmuje:\n• Wszystkie Twoje komputery\n• Wszystkie Twoje urządzenia mobilne\n• Użytek komercyjny (możesz edytować zdjęcia dla klientów)\n\nNie możesz: odsprzedawać presetów ani udostępniać innym osobom.',
-      open: false
-    }
-  ]
-}
-},
-computed: {
-  filteredProducts() {
-    let filtered = this.products
-
-    // Filtrowanie po kategorii
-    if (this.activeFilter !== 'all') {
-      filtered = filtered.filter(p => p.category === this.activeFilter)
-    }
-
-    // Wyszukiwanie
-    if (this.searchQuery) {
-      const query = this.searchQuery.toLowerCase()
-      filtered = filtered.filter(p => 
-        p.title.toLowerCase().includes(query) || 
-        p.description.toLowerCase().includes(query)
-      )
-    }
-
-    // Sortowanie
-    if (this.sortBy === 'price-low') {
-      filtered = [...filtered].sort((a, b) => a.price - b.price)
-    } else if (this.sortBy === 'price-high') {
-      filtered = [...filtered].sort((a, b) => b.price - a.price)
-    } else if (this.sortBy === 'popular') {
-      filtered = [...filtered].sort((a, b) => b.downloads - a.downloads)
-    } else if (this.sortBy === 'newest') {
-      filtered = [...filtered].sort((a, b) => b.id - a.id)
-    }
-
-    return filtered
-  },
-  cartSubtotal() {
-    return this.cart.reduce((sum, item) => sum + item.price, 0)
-  },
-  cartTotal() {
-    return this.cartSubtotal
-  },
-  quickViewImages() {
-    if (!this.quickViewProduct) return []
-    
-    // Jeśli produkt ma tablicę images, użyj jej
-    if (this.quickViewProduct.images && this.quickViewProduct.images.length > 0) {
-      return this.quickViewProduct.images
-    }
-    
-    // Fallback - generuj z głównego zdjęcia
-    const baseUrl = this.quickViewProduct.image
-    return [
-      baseUrl,
-      baseUrl.replace('?w=', '?seed=1&w='),
-      baseUrl.replace('?w=', '?seed=2&w='),
-      baseUrl.replace('?w=', '?seed=3&w=')
-    ]
-  }
-},
-methods: {
-getCategoryName(category) {
-const names = {
-'automotive': 'Motoryzacja',
-'portrait': 'Portrety',
-'universal': 'Uniwersalne'
-}
-return names[category] || category
-},
-addToCart(product) {
-if (!this.isInCart(product.id)) {
-this.cart.push({...product})
-}
-},
-removeFromCart(productId) {
-this.cart = this.cart.filter(item => item.id !== productId)
-},
-clearCart() {
-if (confirm('Czy na pewno chcesz wyczyścić koszyk?')) {
-this.cart = []
-}
-},
-isInCart(productId) {
-return this.cart.some(item => item.id === productId)
-},
-toggleWishlist(productId) {
-const index = this.wishlist.indexOf(productId)
-if (index > -1) {
-this.wishlist.splice(index, 1)
-} else {
-this.wishlist.push(productId)
-}
-},
-isInWishlist(productId) {
-return this.wishlist.includes(productId)
-},
-openQuickView(product) {
-this.quickViewProduct = product
-this.currentImageIndex = 0
-document.body.style.overflow = 'hidden'
-},
-closeQuickView() {
-this.quickViewProduct = null
-document.body.style.overflow = ''
-},
-toggleFaq(index) {
-this.faqs[index].open = !this.faqs[index].open
-},
-nextTestimonial() {
-this.currentTestimonial = (this.currentTestimonial + 1) % this.testimonials.length
-},
-prevTestimonial() {
-this.currentTestimonial = (this.currentTestimonial - 1 + this.testimonials.length) % this.testimonials.length
-},
-goToTestimonial(index) {
-this.currentTestimonial = index
-}
-},
-beforeUnmount() {
-document.body.style.overflow = ''
-}
 }
 </script>
+
 <style scoped>
 .rotate-45 {
   transform: rotate(45deg);
 }
-
 </style>

@@ -195,7 +195,7 @@ button {
   transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.router-link-active {
+.router-link-active:not(.bg-primary) {
   color: #c9432b !important;
 }
 
@@ -301,4 +301,14 @@ button {
 
 .floating {
   animation: float 6s ease-in-out infinite;
+}
+
+/* Force bottom-right position for toasts */
+.Vue-Toastification__container.bottom-right {
+  position: fixed !important;
+  bottom: 1rem !important;
+  right: 1rem !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
 }

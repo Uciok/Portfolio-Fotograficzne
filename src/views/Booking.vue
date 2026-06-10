@@ -4,16 +4,16 @@
     <div class="relative py-32 px-4 overflow-hidden">
       <div class="absolute inset-0 bg-gradient-to-br from-primary/20 via-black to-black"></div>
       <div class="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
-      
+
       <div class="max-w-7xl mx-auto relative z-10">
         <div class="text-center mb-16">
-          <h1 
+          <h1
             class="text-6xl md:text-7xl font-black mb-6"
             data-aos="fade-up"
           >
             Rezerwacja <span class="text-primary">Terminu</span>
           </h1>
-          <p 
+          <p
             class="text-gray-400 text-xl max-w-2xl mx-auto"
             data-aos="fade-up"
             data-aos-delay="100"
@@ -28,27 +28,27 @@
     <div class="bg-black py-8 px-4 sticky top-20 z-30 border-b border-gray-800">
       <div class="max-w-4xl mx-auto">
         <div class="flex items-center justify-between mb-4">
-          <div 
+          <div
             v-for="(step, index) in steps"
             :key="index"
             class="flex items-center flex-1"
           >
             <div class="flex flex-col items-center flex-1">
-              <div 
+              <div
                 class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg transition-all duration-300 mb-2"
                 :class="currentStep > index ? 'bg-primary text-white' : currentStep === index ? 'bg-primary text-white scale-110' : 'bg-gray-800 text-gray-500'"
               >
                 <span v-if="currentStep > index">✓</span>
                 <span v-else>{{ index + 1 }}</span>
               </div>
-              <span 
+              <span
                 class="text-sm font-semibold transition-colors hidden md:block"
                 :class="currentStep >= index ? 'text-white' : 'text-gray-500'"
               >
                 {{ step }}
               </span>
             </div>
-            <div 
+            <div
               v-if="index < steps.length - 1"
               class="h-1 flex-1 mx-2 transition-colors"
               :class="currentStep > index ? 'bg-primary' : 'bg-gray-800'"
@@ -61,7 +61,7 @@
     <!-- Main Content -->
     <div class="py-20 px-4">
       <div class="max-w-4xl mx-auto">
-        
+
         <!-- Krok 1: Typ sesji -->
         <div v-if="currentStep === 0" data-aos="fade-up">
           <h2 class="text-4xl font-black mb-8 text-center">Wybierz typ sesji</h2>
@@ -147,7 +147,7 @@
         <!-- Krok 3: Data i godzina -->
         <div v-if="currentStep === 2" data-aos="fade-up">
           <h2 class="text-4xl font-black mb-8 text-center">Wybierz datę i godzinę</h2>
-          
+
           <!-- Quick suggestions -->
           <div class="bg-gray-900 rounded-2xl p-6 mb-8">
             <h3 class="font-bold text-xl mb-4">⚡ Najbliższe wolne terminy:</h3>
@@ -192,8 +192,8 @@
               <!-- Dni miesiąca -->
               <div class="grid grid-cols-7 gap-2">
                 <button
-                  v-for="date in calendarDays"
-                  :key="date?.toISOString()"
+                  v-for="(date, idx) in calendarDays"
+                  :key="date ? date.toISOString() : 'empty-' + idx"
                   @click="selectDate(date)"
                   :disabled="!isDateAvailable(date)"
                   :class="{
@@ -227,6 +227,9 @@
             <!-- Godziny -->
             <div class="bg-gray-900 rounded-2xl p-6">
               <h3 class="text-xl font-bold mb-6">Wybierz godzinę:</h3>
+              <p v-if="!booking.date" class="text-gray-500 text-sm mb-4">
+                Najpierw wybierz datę z kalendarza.
+              </p>
               <div class="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">
                 <button
                   v-for="time in availableTimes"
@@ -257,10 +260,13 @@
                 <input
                   v-model="booking.name"
                   type="text"
-                  required
-                  class="w-full bg-gray-800 text-white px-6 py-4 rounded-lg border border-gray-700 focus:border-primary outline-none transition-colors"
+                  @blur="validateField('name')"
+                  @input="errors.name && validateField('name')"
+                  :class="errors.name ? 'border-red-500' : 'border-gray-700 focus:border-primary'"
+                  class="w-full bg-gray-800 text-white px-6 py-4 rounded-lg border outline-none transition-colors"
                   placeholder="Jan Kowalski"
                 />
+                <p v-if="errors.name" class="text-red-500 text-sm mt-2">{{ errors.name }}</p>
               </div>
 
               <div>
@@ -268,10 +274,13 @@
                 <input
                   v-model="booking.email"
                   type="email"
-                  required
-                  class="w-full bg-gray-800 text-white px-6 py-4 rounded-lg border border-gray-700 focus:border-primary outline-none transition-colors"
+                  @blur="validateField('email')"
+                  @input="errors.email && validateField('email')"
+                  :class="errors.email ? 'border-red-500' : 'border-gray-700 focus:border-primary'"
+                  class="w-full bg-gray-800 text-white px-6 py-4 rounded-lg border outline-none transition-colors"
                   placeholder="jan@example.com"
                 />
+                <p v-if="errors.email" class="text-red-500 text-sm mt-2">{{ errors.email }}</p>
               </div>
 
               <div>
@@ -279,10 +288,13 @@
                 <input
                   v-model="booking.phone"
                   type="tel"
-                  required
-                  class="w-full bg-gray-800 text-white px-6 py-4 rounded-lg border border-gray-700 focus:border-primary outline-none transition-colors"
+                  @blur="validateField('phone')"
+                  @input="errors.phone && validateField('phone')"
+                  :class="errors.phone ? 'border-red-500' : 'border-gray-700 focus:border-primary'"
+                  class="w-full bg-gray-800 text-white px-6 py-4 rounded-lg border outline-none transition-colors"
                   placeholder="+48 123 456 789"
                 />
+                <p v-if="errors.phone" class="text-red-500 text-sm mt-2">{{ errors.phone }}</p>
               </div>
 
               <div v-if="booking.sessionType === 'motoryzacja'">
@@ -290,10 +302,13 @@
                 <input
                   v-model="booking.carModel"
                   type="text"
-                  required
-                  class="w-full bg-gray-800 text-white px-6 py-4 rounded-lg border border-gray-700 focus:border-primary outline-none transition-colors"
+                  @blur="validateField('carModel')"
+                  @input="errors.carModel && validateField('carModel')"
+                  :class="errors.carModel ? 'border-red-500' : 'border-gray-700 focus:border-primary'"
+                  class="w-full bg-gray-800 text-white px-6 py-4 rounded-lg border outline-none transition-colors"
                   placeholder="BMW M3 2020"
                 />
+                <p v-if="errors.carModel" class="text-red-500 text-sm mt-2">{{ errors.carModel }}</p>
               </div>
 
               <div>
@@ -301,10 +316,13 @@
                 <input
                   v-model="booking.location"
                   type="text"
-                  required
-                  class="w-full bg-gray-800 text-white px-6 py-4 rounded-lg border border-gray-700 focus:border-primary outline-none transition-colors"
+                  @blur="validateField('location')"
+                  @input="errors.location && validateField('location')"
+                  :class="errors.location ? 'border-red-500' : 'border-gray-700 focus:border-primary'"
+                  class="w-full bg-gray-800 text-white px-6 py-4 rounded-lg border outline-none transition-colors"
                   placeholder="np. Warszawa, Stare Miasto"
                 />
+                <p v-if="errors.location" class="text-red-500 text-sm mt-2">{{ errors.location }}</p>
               </div>
 
               <div>
@@ -317,16 +335,20 @@
                 ></textarea>
               </div>
 
-              <div class="flex items-start gap-3">
-                <input
-                  v-model="booking.agreedToTerms"
-                  type="checkbox"
-                  id="terms"
-                  class="w-5 h-5 mt-1 accent-primary"
-                />
-                <label for="terms" class="text-gray-400 text-sm leading-relaxed">
-                  Akceptuję <a href="#" class="text-primary hover:underline">regulamin</a> i <a href="#" class="text-primary hover:underline">politykę prywatności</a>. Zgadzam się na przetwarzanie moich danych osobowych.
-                </label>
+              <div>
+                <div class="flex items-start gap-3">
+                  <input
+                    v-model="booking.agreedToTerms"
+                    type="checkbox"
+                    id="terms"
+                    @change="validateField('agreedToTerms')"
+                    class="w-5 h-5 mt-1 accent-primary"
+                  />
+                  <label for="terms" class="text-gray-400 text-sm leading-relaxed">
+                    Akceptuję <a href="#" class="text-primary hover:underline">regulamin</a> i <a href="#" class="text-primary hover:underline">politykę prywatności</a>. Zgadzam się na przetwarzanie moich danych osobowych.
+                  </label>
+                </div>
+                <p v-if="errors.agreedToTerms" class="text-red-500 text-sm mt-2">{{ errors.agreedToTerms }}</p>
               </div>
             </div>
           </div>
@@ -375,7 +397,7 @@
 
               <!-- Płatność -->
               <div>
-                <h3 class="text-xl font-bold mb-4">Do zapłaty:</h3>
+                <h3 class="text-xl font-bold mb-4">Płatność:</h3>
                 <div class="bg-black rounded-xl p-6">
                   <div class="flex justify-between items-center mb-4">
                     <span class="text-gray-400">Cena pakietu:</span>
@@ -386,14 +408,19 @@
                     <span class="text-xl font-bold text-primary">{{ calculateDeposit() }} zł</span>
                   </div>
                   <div class="flex justify-between items-center">
-                    <span class="text-2xl font-bold">Do zapłaty teraz:</span>
-                    <span class="text-4xl font-black text-primary">{{ calculateDeposit() }} zł</span>
-                  </div>
-                  <p class="text-sm text-gray-500 mt-4">
-                    Pozostała kwota ({{ booking.package?.price - calculateDeposit() }} zł) płatna po sesji.
-                  </p>
+  <span class="text-2xl font-bold">Zaliczka:</span>
+  <span class="text-4xl font-black text-primary">{{ calculateDeposit() }} zł</span>
+</div>
+<p class="text-sm text-gray-500 mt-4">
+  Zaliczka płatna przelewem po potwierdzeniu terminu — dane do wpłaty otrzymasz w wiadomości zwrotnej. Pozostała kwota ({{ booking.package?.price - calculateDeposit() }} zł) płatna po sesji.
+</p>
                 </div>
               </div>
+
+              <!-- Błąd zapisu -->
+              <p v-if="submitError" class="text-red-500 text-center font-semibold">
+                {{ submitError }}
+              </p>
             </div>
           </div>
         </div>
@@ -422,9 +449,10 @@
           <button
             v-if="currentStep === 4"
             @click="submitBooking"
-            class="bg-primary hover:bg-red-600 text-white px-12 py-4 rounded-lg transition-all duration-300 font-bold text-lg hover:scale-105 shadow-2xl shadow-primary/50"
+            :disabled="isSubmitting"
+            class="bg-primary hover:bg-red-600 text-white px-12 py-4 rounded-lg transition-all duration-300 font-bold text-lg hover:scale-105 shadow-2xl shadow-primary/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
-            Potwierdź rezerwację →
+            {{ isSubmitting ? 'Zapisywanie...' : 'Potwierdź rezerwację →' }}
           </button>
         </div>
       </div>
@@ -436,7 +464,7 @@
       class="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4"
       @click="showSuccessModal = false"
     >
-      <div 
+      <div
         class="bg-gray-900 rounded-3xl p-12 max-w-2xl w-full text-center"
         @click.stop
         data-aos="zoom-in"
@@ -444,14 +472,14 @@
         <div class="text-8xl mb-6">🎉</div>
         <h2 class="text-5xl font-black mb-6">Rezerwacja potwierdzona!</h2>
         <p class="text-xl text-gray-400 mb-8 leading-relaxed">
-          Dziękuję za rezerwację! Potwierdzenie zostało wysłane na adres <span class="text-primary font-bold">{{ booking.email }}</span>.
+          Dziękuję za rezerwację! Twoje zgłoszenie zostało zapisane.
         </p>
         <p class="text-gray-400 mb-8">
-          Skontaktuję się z Tobą w ciągu 24h, aby omówić szczegóły sesji.
-        </p>
+  Skontaktuję się z Tobą w ciągu 24h na adres <span class="text-primary font-bold">{{ booking.email }}</span>, aby omówić szczegóły sesji. Po potwierdzeniu terminu prześlę dane do wpłaty zaliczki ({{ calculateDeposit() }} zł), która ostatecznie rezerwuje termin.
+</p>
         <div class="space-y-4">
           <button
-            @click="showSuccessModal = false; resetBooking()"
+            @click="closeSuccessModal"
             class="w-full bg-primary hover:bg-red-600 text-white px-8 py-4 rounded-lg transition-all duration-300 font-bold"
           >
             Zamknij
@@ -469,12 +497,16 @@
 </template>
 
 <script>
+
+import { db, auth } from '../firebase/config'
+import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore'
+
 export default {
   name: 'Booking',
   data() {
     return {
-    currentStep: 0,
-    steps: ['Typ sesji', 'Pakiet', 'Data i czas', 'Dane', 'Podsumowanie'],
+      currentStep: 0,
+      steps: ['Typ sesji', 'Pakiet', 'Data i czas', 'Dane', 'Podsumowanie'],
       booking: {
         sessionType: null,
         package: null,
@@ -488,6 +520,9 @@ export default {
         notes: '',
         agreedToTerms: false
       },
+      errors: {},
+      isSubmitting: false,
+      submitError: null,
       currentMonth: new Date().getMonth(),
       currentYear: new Date().getFullYear(),
       showSuccessModal: false,
@@ -554,8 +589,12 @@ export default {
       availableTimes: [
         '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
       ],
-      bookedDates: [] // Tu będą zajęte terminy z backendu
+      // mapa: 'YYYY-MM-DD' -> ['09:00', '12:00', ...] (zajęte godziny)
+      bookedSlots: {}
     }
+  },
+  mounted() {
+    this.fetchBookedSlots()
   },
   computed: {
     availablePackages() {
@@ -569,18 +608,16 @@ export default {
       const firstDay = new Date(this.currentYear, this.currentMonth, 1)
       const lastDay = new Date(this.currentYear, this.currentMonth + 1, 0)
       const days = []
-      
-      // Puste dni na początku (przesunięcie do poniedziałku)
+
       const startDay = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1
       for (let i = 0; i < startDay; i++) {
         days.push(null)
       }
-      
-      // Dni miesiąca
+
       for (let i = 1; i <= lastDay.getDate(); i++) {
         days.push(new Date(this.currentYear, this.currentMonth, i))
       }
-      
+
       return days
     },
     quickDateSuggestions() {
@@ -588,18 +625,18 @@ export default {
       const today = new Date()
       let daysChecked = 0
       let suggestionsFound = 0
-      
+
       while (suggestionsFound < 3 && daysChecked < 30) {
         const date = new Date(today)
         date.setDate(date.getDate() + daysChecked + 1)
-        
+
         if (this.isDateAvailable(date)) {
           suggestions.push(date)
           suggestionsFound++
         }
         daysChecked++
       }
-      
+
       return suggestions
     },
     canProceed() {
@@ -611,107 +648,269 @@ export default {
         case 2:
           return !!this.booking.date && !!this.booking.time
         case 3:
-          return this.booking.name && this.booking.email && this.booking.phone && this.booking.location && this.booking.agreedToTerms
+          // Przycisk zawsze klikalny - walidacja z komunikatami odpala się w nextStep()
+          return true
         default:
           return true
       }
     }
   },
   methods: {
+    // ===== POBIERANIE ZAJĘTYCH TERMINÓW =====
+    async fetchBookedSlots() {
+      try {
+        const snapshot = await getDocs(collection(db, 'bookings'))
+        const slots = {}
+        snapshot.forEach((doc) => {
+          const data = doc.data()
+          if (data.date && data.time) {
+            if (!slots[data.date]) slots[data.date] = []
+            slots[data.date].push(data.time)
+          }
+        })
+        this.bookedSlots = slots
+      } catch (error) {
+        console.error('Błąd pobierania zajętych terminów:', error)
+        // Nie blokujemy formularza - w najgorszym razie kolizję wyłapiemy przy zapisie
+      }
+    },
+
+    // ===== WALIDACJA =====
+    validateField(field) {
+      const v = this.booking
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      const phoneRegex = /^(\+48[\s-]?)?\d{3}[\s-]?\d{3}[\s-]?\d{3}$/
+
+      switch (field) {
+        case 'name':
+          if (!v.name.trim()) this.errors.name = 'Imię i nazwisko jest wymagane'
+          else if (v.name.trim().length < 3) this.errors.name = 'Podaj pełne imię i nazwisko'
+          else delete this.errors.name
+          break
+        case 'email':
+          if (!v.email.trim()) this.errors.email = 'Adres email jest wymagany'
+          else if (!emailRegex.test(v.email.trim())) this.errors.email = 'Podaj poprawny adres email'
+          else delete this.errors.email
+          break
+        case 'phone':
+          if (!v.phone.trim()) this.errors.phone = 'Numer telefonu jest wymagany'
+          else if (!phoneRegex.test(v.phone.trim())) this.errors.phone = 'Podaj poprawny numer telefonu (9 cyfr, np. +48 123 456 789)'
+          else delete this.errors.phone
+          break
+        case 'carModel':
+          if (v.sessionType === 'motoryzacja' && !v.carModel.trim()) this.errors.carModel = 'Podaj markę i model auta'
+          else delete this.errors.carModel
+          break
+        case 'location':
+          if (!v.location.trim()) this.errors.location = 'Lokalizacja sesji jest wymagana'
+          else delete this.errors.location
+          break
+        case 'agreedToTerms':
+          if (!v.agreedToTerms) this.errors.agreedToTerms = 'Musisz zaakceptować regulamin i politykę prywatności'
+          else delete this.errors.agreedToTerms
+          break
+      }
+    },
+    validateStep3() {
+      const fields = ['name', 'email', 'phone', 'carModel', 'location', 'agreedToTerms']
+      fields.forEach((f) => this.validateField(f))
+      return Object.keys(this.errors).length === 0
+    },
+
+    // ===== WYBÓR OPCJI =====
     selectSessionType(type) {
       this.booking.sessionType = type
-  this.booking.package = null
-},
-selectPackage(pkg) {
-  this.booking.package = pkg
-},
-changeMonth(direction) {
-  this.currentMonth += direction
-  if (this.currentMonth > 11) {
-    this.currentMonth = 0
-    this.currentYear++
-  } else if (this.currentMonth < 0) {
-    this.currentMonth = 11
-    this.currentYear--
+      this.booking.package = null
+      setTimeout(() => {
+        if (this.canProceed) {
+          this.nextStep()
+        }
+      }, 300)
+    },
+    selectPackage(pkg) {
+      this.booking.package = pkg
+      setTimeout(() => {
+        if (this.canProceed) {
+          this.nextStep()
+        }
+      }, 300)
+    },
+    changeMonth(direction) {
+      this.currentMonth += direction
+      if (this.currentMonth > 11) {
+        this.currentMonth = 0
+        this.currentYear++
+      } else if (this.currentMonth < 0) {
+        this.currentMonth = 11
+        this.currentYear--
+      }
+    },
+
+    // ===== DATY I GODZINY =====
+    // Lokalny format YYYY-MM-DD (bez przesunięcia strefy czasowej, które daje toISOString)
+    toDateStr(date) {
+      const y = date.getFullYear()
+      const m = String(date.getMonth() + 1).padStart(2, '0')
+      const d = String(date.getDate()).padStart(2, '0')
+      return `${y}-${m}-${d}`
+    },
+    isDateAvailable(date) {
+      if (!date) return false
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      if (date < today) return false
+      if (date.getDay() === 0) return false // niedziele wolne
+
+      // Data zajęta tylko jeśli WSZYSTKIE godziny są zarezerwowane
+      const taken = this.bookedSlots[this.toDateStr(date)] || []
+      return taken.length < this.availableTimes.length
+    },
+    isDateSelected(date) {
+      if (!date || !this.booking.date) return false
+      return date.toDateString() === this.booking.date.toDateString()
+    },
+    selectDate(date) {
+      if (!this.isDateAvailable(date)) return
+      this.booking.date = date
+      // Jeśli wcześniej wybrana godzina jest zajęta w nowej dacie - wyczyść
+      if (this.booking.time && !this.isTimeAvailable(this.booking.time)) {
+        this.booking.time = null
+      }
+    },
+    selectQuickDate(date) {
+      this.currentMonth = date.getMonth()
+      this.currentYear = date.getFullYear()
+      this.selectDate(date)
+    },
+    isTimeAvailable(time) {
+      if (!this.booking.date) return false
+      const taken = this.bookedSlots[this.toDateStr(this.booking.date)] || []
+      return !taken.includes(time)
+    },
+    selectTime(time) {
+      if (!this.isTimeAvailable(time)) return
+      this.booking.time = time
+    },
+    formatDate(date) {
+      if (!date) return ''
+      const months = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia']
+      const days = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']
+      return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`
+    },
+    calculateDeposit() {
+      return Math.round(this.booking.package?.price * 0.3) || 0
+    },
+
+    // ===== NAWIGACJA =====
+    scrollToContent() {
+      this.$nextTick(() => {
+        const progressBar = document.querySelector('.sticky')
+        if (progressBar) {
+          const offset = progressBar.offsetTop + progressBar.offsetHeight + 20
+          window.scrollTo({
+            top: offset,
+            behavior: 'smooth'
+          })
+        } else {
+          window.scrollTo({
+            top: 200,
+            behavior: 'smooth'
+          })
+        }
+      })
+    },
+    nextStep() {
+      // Walidacja danych kontaktowych z komunikatami błędów
+      if (this.currentStep === 3 && !this.validateStep3()) {
+        return
+      }
+      if (this.canProceed && this.currentStep < this.steps.length - 1) {
+        this.currentStep++
+        this.scrollToContent()
+      }
+    },
+    prevStep() {
+      if (this.currentStep > 0) {
+        this.currentStep--
+        this.scrollToContent()
+      }
+    },
+
+    // ===== ZAPIS REZERWACJI =====
+    async submitBooking() {
+      // Ostatnia linia obrony - waliduj jeszcze raz przed zapisem
+      if (!this.validateStep3()) {
+        this.currentStep = 3
+        this.scrollToContent()
+        return
+      }
+
+      this.isSubmitting = true
+      this.submitError = null
+
+      try {
+        // Sprawdź, czy termin nie został w międzyczasie zajęty
+        await this.fetchBookedSlots()
+        if (!this.isTimeAvailable(this.booking.time)) {
+          this.submitError = 'Ten termin został właśnie zarezerwowany przez kogoś innego. Wybierz inną godzinę.'
+          this.currentStep = 2
+          this.booking.time = null
+          this.scrollToContent()
+          return
+        }
+
+        await addDoc(collection(db, 'bookings'), {
+          sessionType: this.booking.sessionType,
+          packageId: this.booking.package.id,
+          packageName: this.booking.package.name,
+          packagePrice: this.booking.package.price,
+          deposit: this.calculateDeposit(),
+          date: this.toDateStr(this.booking.date),
+          dateFormatted: this.formatDate(this.booking.date),
+          time: this.booking.time,
+          name: this.booking.name.trim(),
+          email: this.booking.email.trim(),
+          phone: this.booking.phone.trim(),
+          carModel: this.booking.carModel.trim() || null,
+          location: this.booking.location.trim(),
+          notes: this.booking.notes.trim() || null,
+          userId: auth.currentUser ? auth.currentUser.uid : null,
+          status: 'pending',
+          createdAt: serverTimestamp()
+        })
+
+        this.showSuccessModal = true
+      } catch (error) {
+        console.error('Błąd zapisu rezerwacji:', error)
+        this.submitError = 'Nie udało się zapisać rezerwacji. Spróbuj ponownie za chwilę.'
+      } finally {
+        this.isSubmitting = false
+      }
+    },
+    closeSuccessModal() {
+      this.showSuccessModal = false
+      this.resetBooking()
+      this.fetchBookedSlots() // odśwież zajęte terminy
+    },
+    resetBooking() {
+      this.currentStep = 0
+      this.errors = {}
+      this.submitError = null
+      this.booking = {
+        sessionType: null,
+        package: null,
+        date: null,
+        time: null,
+        name: '',
+        email: '',
+        phone: '',
+        carModel: '',
+        location: '',
+        notes: '',
+        agreedToTerms: false
+      }
+    }
   }
-},
-isDateAvailable(date) {
-  if (!date) return false
-  
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  
-  // Sprawdź czy data nie jest w przeszłości
-  if (date < today) return false
-  
-  // Sprawdź czy to nie niedziela
-  if (date.getDay() === 0) return false
-  
-  // Sprawdź czy data nie jest zajęta
-  const dateStr = date.toISOString().split('T')[0]
-  return !this.bookedDates.includes(dateStr)
-},
-isDateSelected(date) {
-  if (!date || !this.booking.date) return false
-  return date.toDateString() === this.booking.date.toDateString()
-},
-selectDate(date) {
-  if (!this.isDateAvailable(date)) return
-  this.booking.date = date
-},
-selectQuickDate(date) {
-  this.currentMonth = date.getMonth()
-  this.currentYear = date.getFullYear()
-  this.booking.date = date
-},
-isTimeAvailable(time) {
-  // Tutaj można dodać logikę sprawdzania dostępności godzin
-  return true
-},
-selectTime(time) {
-  if (!this.isTimeAvailable(time)) return
-  this.booking.time = time
-},
-formatDate(date) {
-  if (!date) return ''
-  const months = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia']
-  const days = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']
-  return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`
-},
-calculateDeposit() {
-  return Math.round(this.booking.package?.price * 0.3) || 0
-},
-nextStep() {
-  if (this.canProceed && this.currentStep < this.steps.length - 1) {
-    this.currentStep++
-  }
-},
-prevStep() {
-  if (this.currentStep > 0) {
-    this.currentStep--
-  }
-},
-submitBooking() {
-  // Tutaj wysyłka do backendu
-  console.log('Booking submitted:', this.booking)
-  this.showSuccessModal = true
-},
-resetBooking() {
-  this.currentStep = 0
-  this.booking = {
-    sessionType: null,
-    package: null,
-    date: null,
-    time: null,
-    name: '',
-    email: '',
-    phone: '',
-    carModel: '',
-    location: '',
-    notes: '',
-    agreedToTerms: false
-  }
-}
-}
 }
 </script>
